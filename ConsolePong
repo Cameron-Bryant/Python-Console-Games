@@ -1,0 +1,152 @@
+import time
+import random
+import msvcrt as kb
+dimensions = 15 #width and height of the playing field
+#CONSOLE PONG:> COMPLETED
+class Ball:
+    def __init__(self, dir, angle):
+        self.x = int(dimensions/2)
+        self.y = int(dimensions/2)
+
+        self.dir = dir #left or right
+        self.angle = angle # 1, 0, -1
+
+    def move(self):
+        #borders and score detection
+        if (self.y == dimensions - 1):#if it hits bottom
+            self.angle = 1
+
+        elif (self.y == 1): # if it hits top
+            self.angle = -1
+        elif (self.x >= dimensions - 1): #if it hits right border
+            self.dir = "LEFT"
+            self.x = int(dimensions/2)
+            left_paddle.SCORE += 1
+
+            print("Left:>" + str(left_paddle.SCORE) + " Right:>" + str(right_paddle.SCORE))
+            time.sleep(.5)
+
+        elif (self.x <= 1): # if it hits left border
+            self.dir = "RIGHT"
+            self.x = int(dimensions/2)
+
+            right_paddle.SCORE += 1
+            print("Left:>" + str(left_paddle.SCORE) + " Right:>" + str(right_paddle.SCORE))
+            time.sleep(.5)
+
+        #movements
+        if (self.dir == "LEFT" and self.angle == 0): #left, 0 = left
+            self.x -= 1
+        elif (self.dir == "LEFT" and self.angle == 1): #left, 1 = left diag up
+            self.x -= 1
+            self.y -= 1 
+        elif (self.dir == "LEFT" and self.angle == -1):#left, -1 = left diag down
+            self.x -= 1
+            self.y += 1
+        elif (self.dir == "RIGHT" and self.angle == 0): # RIGHT, 0 = RIGHT
+            self.x += 1
+        elif (self.dir == "RIGHT" and self.angle == 1): #RIGHT, 1 = right diag up
+            self.x += 1
+            self.y -= 1
+        elif (self.dir == "RIGHT" and self.angle == -1): #right, -1 = right diag down
+            self.x += 1
+            self.y += 1
+
+        self.checkHit()
+
+    def bounce(self): # called if it hits paddle. Sends to opposit dir and angle
+        choice = random.randint(0, 2) #chooses a random angle
+        if (self.dir == "LEFT"):
+            self.dir = "RIGHT"
+
+            if (choice == 2):
+                self.angle = 0
+            elif (choice == 1):
+                self.angle = 1
+            elif (choice == 0):
+                self.angle = -1
+        elif (self.dir == "RIGHT"):
+            self.dir = "LEFT"
+
+            if (choice == 2):
+                self.angle = 0
+            elif (choice == 1):
+                self.angle = 1
+            elif (choice == 0):
+                self.angle = -1
+
+    def checkHit(self):
+        for i in range(len(left_paddle.pdl)):
+            if (self.x == left_paddle.x + 1 and self.y == left_paddle.pdl[i][1]):
+                self.bounce()
+            if (self.x == right_paddle.x - 1  and self.y == right_paddle.pdl[i][1]):
+                self.bounce()
+b = Ball("LEFT", 0)
+
+
+class Paddle:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.SCORE = 0
+        #pdl = detection zone
+        self.pdl = [[self.x, self.y], [self.x, self.y + 1], [self.x, self.y + 2], [self.x, self.y - 1], [self.x, self.y -2 ]]
+    def updatePaddle(self):
+        self.pdl = [[self.x, self.y], [self.x, self.y + 1], [self.x, self.y + 2], [self.x, self.y - 1], [self.x, self.y -2 ]]
+
+    def move(self, dir):
+        if (dir == "UP" and self.y > 2):
+            self.y -= 1
+        elif (dir == "DOWN" and self.y < dimensions - 2):
+            self.y += 1
+        self.updatePaddle()
+   
+
+class GameArea:
+    def __init__(self):
+        self.defaultValue = ' '
+        self.occupiedValue = 'o'
+        self.gArea = [[self.defaultValue] * (dimensions + 1) for i in range(dimensions + 1)]
+        
+    def printArea(self):
+        for i in range(len(self.gArea)):
+            print(self.gArea[i])
+        print("\n\n\n\n\n\n\n\n\n\n\n")
+    def clearArea(self):
+        self.gArea = [[self.defaultValue] * (dimensions + 1) for i in range(dimensions + 1)]
+    def updateArea(self, x, y):
+        self.gArea[y][x] = self.occupiedValue
+
+left_paddle = Paddle(2, int(dimensions/2))
+right_paddle = Paddle(dimensions - 2, int(dimensions/2))
+g = GameArea()
+
+def runGame():
+    running = True
+    print("\n\n\n\n\n\n\n\n\n\n\n")
+    while running == True:
+        if (kb.kbhit()):
+            kp = str(kb.getch().lower())
+            
+            if (kp == "b'w'"):
+                left_paddle.move("UP")
+            elif (kp == "b's'"):
+                left_paddle.move("DOWN")
+            if (kp == "b'u'"):
+                right_paddle.move("UP")
+            if (kp == "b'n'"):
+                right_paddle.move("DOWN")
+            if (kp == "b'x'"):
+                running = False
+           
+        for i in range(len(left_paddle.pdl)):
+            g.updateArea(left_paddle.pdl[i][0], left_paddle.pdl[i][1])
+        for j in range(len(right_paddle.pdl)):
+            g.updateArea(right_paddle.pdl[j][0], right_paddle.pdl[j][1])
+        b.move()
+        g.updateArea(b.x,b.y)
+        g.printArea()
+        time.sleep(.4)
+        g.clearArea()
+
+runGame()
