@@ -1,0 +1,142 @@
+import random
+import time
+import msvcrt as kb
+
+dimensions = 20
+
+class Food:
+    def __init__(self):
+        self.x = random.randint(0, dimensions)
+        self.y = random.randint(0, dimensions)
+
+    def respawn(self):
+        self.x = random.randint(0, dimensions)
+        self.y = random.randint(0, dimensions)    
+f = Food()        
+class Snake:
+    def __init__(self):
+        self.eats = 0
+        self.x = random.randint(0, dimensions)
+        self.y = random.randint(0, dimensions)
+        self.path = [[self.x, self.y]]
+        self.length = 1
+        self.deaths = 0
+        self.snake_draw_array = []
+    
+    def updateDrawArray(self):
+        self.snake_draw_array = [[self.x, self.y]]
+        for i in range(self.length):
+            self.snake_draw_array.append(self.path[i*-1]) #append index of path from end
+
+    def eat(self):
+        f.respawn()
+        self.eats += 1
+        self.length += 1
+        
+    def die(self):
+        self.deaths += 1
+        self.eats = 0
+        f.respawn()
+        
+        print("YOU DIED")
+        print("eats:>" + str(self.eats))
+        print("Deaths:>" + str(self.deaths))
+
+        time.sleep(1)
+        self.x = int(dimensions/2)
+        self.y = int(dimensions/2)
+
+    def move(self, dir):
+        self.path.append([self.x,self.y]) #before each move append previous move
+
+        if (dir == "LEFT"):
+            self.x -= 1
+        elif (dir == "RIGHT"):
+            self.x += 1
+        elif (dir == "UP"):
+            self.y -= 1
+        elif (dir == "DOWN"):
+            self.y += 1
+        if (self.x == f.x and self.y == f.y): #eat, re
+            self.eat()
+
+        self.updateDrawArray()
+
+        #check borders
+        if (self.x >= (dimensions + 1)):
+            self.die()
+        elif (self.x <= 0):
+            self.die()
+        elif (self.y >= (dimensions + 1)):
+            self.die()
+        elif (self.y <= 0):
+            self.die()
+
+
+    def seekFood(self): #ignore if doing user input. Self-runner for testing
+        diffx = f.x - self.x
+        diffy = f.y - self.y
+
+        if (diffx > 0):
+            self.move("RIGHT")
+        elif (diffx < 0):
+            self.move("LEFT")
+        elif (diffy > 0):
+            self.move("DOWN")
+        elif (diffy < 0):
+            self.move("UP")
+
+
+
+s = Snake()
+class GameArea:
+    def __init__(self):
+        self.defaultValue = 0
+        self.occupiedValue = 1
+        self.gArea = [[self.defaultValue] * (dimensions + 1) for i in range(dimensions + 1)]
+
+    def clearArea(self):
+        self.gArea = [[self.defaultValue] * (dimensions + 1) for i in range(dimensions + 1)]
+
+    def updateArea(self, x, y):
+        self.gArea[y][x] = self.occupiedValue
+    def printArea(self):
+        for i in range(len(self.gArea)):
+            print(self.gArea[i])
+        print("\n\n\n\n\n\n\n\n\n\n")
+
+g = GameArea()
+def runGame():
+    running = True
+    inertia = "LEFT" #since snake is supposed to keep moving without user input we need a var that will store the direction it is moving
+    while running == True:
+        print("s.x" + str(s.x) + " s.y" + str(s.y))
+        s.move(inertia)
+        if (kb.kbhit()): #check for user input and move snake accoridingly. 
+            kp = str(kb.getch().lower())
+            
+            if (kp == "b'w'"):
+                s.move("UP")
+                inertia = "UP"
+            if (kp == "b'a'"):
+                s.move("LEFT")
+                inertia = "LEFT"
+            if (kp == "b's'"):
+                s.move("DOWN")
+                inertia = "DOWN"
+            if (kp == "b'd'"):
+                s.move("RIGHT")
+                inertia = "RIGHT"
+            if (kp == "b'x'"):
+                running = False
+        if (s.length > 1):
+            for i in range(len(s.snake_draw_array)): #display the snake
+                g.updateArea(s.snake_draw_array[i][0], s.snake_draw_array[i][1])
+        g.updateArea(f.x,f.y) 
+        g.updateArea(s.x, s.y)
+        g.printArea()
+        time.sleep(.3)
+        g.clearArea()
+
+
+runGame()
