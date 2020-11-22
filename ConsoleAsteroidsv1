@@ -1,0 +1,343 @@
+import time
+import random
+import msvcrt as kb
+import math
+###Controls: a:> turn left, d:> turn right, f:> shoot
+###objective:> avoid and destroy "asteroids"
+
+dimensions = 40
+
+class GameArea:
+    def __init__(self):
+        self.defaultValue = ' '
+        self.gArea = [[self.defaultValue] * (dimensions + 1) for i in range(dimensions + 1)]
+
+    def printArea(self):
+        for i in range(len(self.gArea)):
+            #print(*self.gArea[i], sep = '.')
+            print(self.gArea[i])
+        print("\n\n\n\n")
+
+    def updateArea(self, x, y, val):
+        self.gArea[y][x] = val
+
+    def updateAreaWithArray(self, pos, val):
+        self.gArea[pos[1]][pos[0]] = val
+        
+    def clearArea(self):
+        self.gArea = [[self.defaultValue] * (dimensions + 1) for i in range(dimensions + 1)]
+
+    def updateAreaWithListOfCoords(self, coordlist, val):
+        for i in range(len(coordlist)):
+            self.gArea[coordlist[i][1]][coordlist[i][0]] = val 
+
+    def genBorderArray(self):
+        bArr = []
+        for i in range(dimensions):
+            bArr.append([dimensions, i])
+            bArr.append([i, dimensions])
+            bArr.append([0, i])
+            bArr.append([i, 0])
+        return bArr
+
+g = GameArea()
+borders = g.genBorderArray()
+
+class Player:
+    def __init__(self):
+        self.x = random.randint(0, dimensions)
+        self.y = int(dimensions/2)
+        self.angle = 0
+        self.displayCharacter = '^'
+        self.direction = 4
+        self.mf = 1
+        self.health = 200
+        self.score = 0
+
+    def showDeathScreen(self):
+        print("YOU CRASHED")
+        print("RETRY!")
+        print("SCORE:>" + str(self.score))
+        self.score = 0
+        time.sleep(1)
+
+    def bounce(self):
+        if (self.direction == 1): #opposites
+            self.direction = 5
+        elif (self.direction == 2):
+            self.direction = 6
+        elif (self.direction == 3):
+            self.direction = 7
+        elif (self.direction == 4):
+            self.direction = 8
+        elif (self.direction == 5):
+            self.direction = 1
+        elif (self.direction == 6):
+            self.direction = 2
+        elif (self.direction == 7):
+            self.direction = 3
+        elif (self.direction == 8):
+            self.direction = 4
+
+    def checkBoundaries(self):
+        if (self.x > dimensions):
+            self.x = 0
+        elif (self.x < 0):
+            self.x = dimensions
+        if (self.y > dimensions):
+            self.y = 0
+        elif (self.y < 0):
+            self.y = dimensions
+
+    def shoot(self):
+        d = ""
+        ang = 0
+        if (self.direction == 1): #translation from rotary to direction, angle
+            d = "LEFT"
+            ang = -1
+        elif (self.direction == 2):
+            d = "LEFT"
+            ang = 0
+        elif (self.direction == 3):
+            d = "LEFT"
+            ang = 1
+        elif (self.direction == 4):
+            d = "UP"
+        elif (self.direction == 5):
+            d = "RIGHT"
+            ang = 1
+        elif (self.direction == 6):
+            d = "RIGHT"
+            ang = 0
+        elif (self.direction == 7):
+            d = "RIGHT"
+            ang = -1
+        elif (self.direction == 8):
+            d = "DOWN"
+
+        p.setAttributes(self.x, self.y, d, ang)
+
+    def move(self, dir): #rotary movement:> 1 - 8 scale of positions. Left and right controls which positiion you are in
+        if dir <= 1:
+            self.direction += dir
+        if (self.direction > 8):
+            self.direction = 1
+        elif (self.direction < 1):
+            self.direction = 8
+
+        if (self.direction == 1):
+            self.x -= self.mf
+            self.y += self.mf
+            self.displayCharacter = '<'
+        elif (self.direction == 2):
+            self.x -= self.mf
+            self.displayCharacter = '<'
+        elif (self.direction == 3):
+            self.x -= self.mf
+            self.y -= self.mf
+            self.displayCharacter = '^'
+        elif (self.direction == 4):
+            self.y -= self.mf
+            self.displayCharacter = '^'
+        elif (self.direction == 5):
+            self.x += self.mf
+            self.y -= self.mf
+            self.displayCharacter = '>'
+        elif (self.direction == 6):
+            self.x += self.mf
+            self.displayCharacter = '>'
+        elif (self.direction == 7):
+            self.x += self.mf
+            self.y += 1
+            self.displayCharacter = 'v'
+        elif (self.direction == 8):
+            self.y += self.mf
+            self.displayCharacter = 'v'
+        
+        if (self.health <= 0):
+            self.showDeathScreen()
+        self.score += 1
+        self.checkBoundaries()
+            
+class Projectile:
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.direction = ""
+        self.angle = 0
+        self.mf = 2
+        self.hasCollided = False
+        self.canFire = False
+        self.bulletChar = '*'
+
+    def setAttributes(self, x, y, direction, angle):
+        self.x = x
+        self.y = y
+        self.direction = direction
+        self.angle = angle
+        self.canFire = True
+
+    def checkHit(self):
+        for i in range(len(asts)):
+            if asts[i].x == self.x and self.y == asts[i].y:
+                self.canFire = False
+                self.x = int(dimensions/2)
+                self.y = int(dimensions/2)
+                
+        if (self.x <= 0 or self.x >= dimensions or self.y <= 0 or self.y >= dimensions):
+            self.canFire = False
+            self.x = int(dimensions/2)
+            self.y = int(dimensions/2)
+
+    def fire(self): #moves with the given direction and angle until it collides with something
+        if (self.canFire == True):
+            if (self.direction == "LEFT"):
+                self.x -= self.mf
+            elif (self.direction == "RIGHT"):
+                self.x += self.mf
+            elif (self.direction == "UP"):
+                self.y -= self.mf
+            elif (self.direction == "DOWN"):
+                self.y += self.mf
+
+            if (self.angle == 1):
+                self.y -= self.mf
+            elif (self.angle == -1):
+                self.y += self.mf
+
+            self.checkHit()
+
+p = Projectile()
+
+class Asteroid:
+    def __init__(self):
+        self.size = random.randint(1, 2)
+        self.x = random.randint(self.size, (dimensions - self.size))
+        self.y = random.randint(self.size, (dimensions - self.size))
+        self.movementFactor = 1
+        self.hitbox = []
+        self.broken = False
+        dchoice = random.randint(0, 3)
+        if (dchoice == 0):
+            self.direction = "LEFT"
+        if (dchoice == 1):
+            self.direction = "RIGHT"
+        if (dchoice == 2):
+            self.direction = "UP"
+        if (dchoice == 3):
+            self.direction = "DOWN"
+        self.angle = random.randint(-1, 1)
+        self.dispChar = 'o'
+
+    def reflect(self):
+        if (self.direction == "RIGHT"): #if collision send in opposite direction and random angle
+            self.direction = "LEFT"
+        elif (self.direction == "LEFT"):
+            self.direction = "RIGHT"
+        elif (self.direction == "UP"):
+            self.direction = "DOWN"
+        elif (self.direction == "DOWN"):
+            self.direction = "UP"
+        self.angle = random.randint(-1, 1)
+
+    def checkCollisions(self):
+        self.hitbox = [[self.x, self.y]]#generate hitbox/sprite respective to x
+        for i in range(self.size):
+            self.hitbox.append([self.x - i, self.y])
+            self.hitbox.append([self.x + i, self.y])
+            self.hitbox.append([self.x, self.y - i])
+            self.hitbox.append([self.x, self.y + i])
+            self.hitbox.append([self.x - i, self.y - i])
+            self.hitbox.append([self.x + i, self.y + i])
+            self.hitbox.append([self.x - i, self.y + i])
+            self.hitbox.append([self.x + i, self.y - i])
+        #print(self.hitbox)
+        #self.hitbox = [[self.x, self.y], [self.x - 1, self.y], [self.x + 1, self.y], [self.x, self.y - 1], [self.x, self.y + 1], [self.x - 1, self.y - 1], [self.x + 1, self.y + 1], [self.x - 1, self.y + 1], [self.x + 1, self.y - 1]]
+        for j in range(len(asts)): #asteroid collision
+            if ([asts[j].x, asts[j].y] in self.hitbox and asts[j].direction != self.direction and asts[j].broken == False):
+                self.reflect()
+                asts[j].reflect()
+                self.size -= 1
+                asts[j].size -= 1
+
+        if (p.canFire == True and [p.x, p.y] in self.hitbox):#projectile collision
+            self.size -= 1
+            if self.size == 0:
+                self.broken = True
+        elif ([player.x, player.y] in self.hitbox): #player collision
+            self.reflect()
+            player.bounce()
+            player.health -= 20
+            self.size -= 1
+
+    def checkBounds(self):
+        for i in range(len(self.hitbox)):
+            if (self.hitbox[i][0] < 0):
+                self.x = dimensions - self.size
+                self.mov()
+            elif (self.hitbox[i][0] > dimensions):
+                self.x = self.size
+                self.mov()
+            if (self.hitbox[i][1] < 0):
+                self.y = dimensions - self.size
+                self.mov()
+            elif (self.hitbox[i][1] > dimensions):
+                self.y = self.size
+                self.mov()
+    def mov(self):
+        #self.angle = random.randint(-1, 1)
+        if (self.direction == "LEFT"):
+            self.x -= self.movementFactor
+        elif (self.direction == "RIGHT"):
+            self.x += self.movementFactor
+        elif (self.direction == "UP"):
+            self.y -= self.movementFactor
+        elif (self.direction == "DOWN"):
+            self.y += self.movementFactor
+       
+        if (self.angle == 1):
+            self.y -= self.movementFactor
+        elif (self.angle == -1):
+            self.y += self.movementFactor
+        
+        self.checkCollisions()
+        self.checkBounds()
+
+def genAsteroids(n):
+    ast = [Asteroid() for i in range(n)]
+    return ast
+
+asts = genAsteroids(5)
+player = Player()
+
+def runGame():
+    running = True
+    while running == True:
+        #if key is pressed move the player else keep the player moving in its direction
+        if (kb.kbhit()):
+            kp = str(kb.getch().lower())
+            if (kp == "b'a'"):
+                player.move(-1)
+            elif (kp == "b'd'"):
+                player.move(1)
+            elif (kp == "b'x'"):
+                running = False
+            elif (kp == "b'f'"):
+                player.shoot()
+        else:
+            player.move(player.direction)
+        #display player
+        if (p.canFire == True):
+            p.fire()
+            g.updateArea(p.x, p.y, p.bulletChar)
+        g.updateArea(player.x, player.y, player.displayCharacter)
+
+        for i in range(len(asts)):
+            if (asts[i].broken == False):#if player shoots the asteroid the asteroid shrinks and when size = 0 broken = true
+                asts[i].mov()
+                g.updateAreaWithListOfCoords(asts[i].hitbox, asts[i].dispChar)
+        g.printArea()
+        g.clearArea()
+        time.sleep(.1)
+
+runGame()
